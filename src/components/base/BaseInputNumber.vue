@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
-import { helpers, required } from '@vuelidate/validators'
+import { helpers, minValue, required } from '@vuelidate/validators'
 import Inputmask from 'inputmask'
 import type { TNullable } from '@/types'
 
 const props = defineProps<{
-  currency: string
+  minVal?: number
+  placeholder?: string
+  suffix?: string
+  disabled?: boolean
 }>()
 
 const inputRef = ref()
@@ -21,7 +24,8 @@ const handleBlur = () => (isFocused.value = false)
 
 const validationRules = computed(() => ({
   modelValue: {
-    required: helpers.withMessage('Обязательное поле', required)
+    required: helpers.withMessage('Обязательное поле', required),
+    minValue: helpers.withMessage('Обязательное поле', minValue(props.minVal || 0))
   }
 }))
 
@@ -31,14 +35,12 @@ onMounted(() => {
   Inputmask({
     alias: 'numeric',
     groupSeparator: '.',
-    autoGroup: true,
     allowMinus: false,
     rightAlign: false,
     digits: 0,
     min: 0,
-    max: null,
-    placeholder: '',
-    suffix: props.currency
+    placeholder: props.placeholder,
+    suffix: props.suffix
   }).mask(inputRef.value)
 })
 </script>
@@ -48,8 +50,9 @@ onMounted(() => {
     <input
       ref="inputRef"
       v-model="v$.modelValue.$model"
-      class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+      class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:cursor-not-allowed"
       type="text"
+      :disabled="disabled"
       @focus="handleFocus"
       @blur="handleBlur"
     />

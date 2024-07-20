@@ -1,84 +1,85 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { usePaymentDataStore } from '@/stores/paymentData'
+import { useCurrenciesStore } from '@/stores/currencies'
 import { isErrorInstance } from '@/utils'
-import type { TNullable } from '@/types'
+import type { ICurrenciesState, IPatmentPayload } from '@/types'
 
-import BaseCurrencyInput from '@/components/base/BaseCurrencyInput.vue'
-import BaseCurrencyRadio from '@/components/base/BaseCurrencyRadio.vue'
-import BaseCurrencySelect from '@/components/base/BaseCurrencySelect.vue'
+import BaseSelect from '@/components/base/BaseSelect.vue'
+import PaymentMethods from '@/components/PaymentMethods.vue'
+import PaymentSum from '@/components/PaymentSum.vue'
 
-const state = reactive<{
-  sum: TNullable<string>
-}>({
-  sum: null
+const payload = reactive<IPatmentPayload>({
+  amount: null,
+  currency: null,
+  method: null
 })
 
-const paymentDataStore = usePaymentDataStore()
-const { getPaymentData } = paymentDataStore
-const { paymentDataError, fiatCurrencies } = storeToRefs(paymentDataStore)
+const state = reactive<ICurrenciesState>({
+  currentCurrencyData: null,
+  methodCode: null
+})
 
-getPaymentData()
+const currenciesStore = useCurrenciesStore()
+const { loadCurrenciesData } = currenciesStore
+const { currenciesDataError, currenciesData, defaultCurrency, currenciesList } =
+  storeToRefs(currenciesStore)
+
+loadCurrenciesData().then(() => {
+  payload.currency = defaultCurrency.value
+})
+
+watch(
+  () => payload.currency,
+  (val) => {
+    if (val && currenciesData.value) {
+      state.currentCurrencyData = currenciesData.value[val]
+      state.methodCode = null
+    }
+  }
+)
+
+watch(
+  () => state.methodCode,
+  (val) => {
+    payload.method = state.currentCurrencyData?.find((item) => item.code === val) || null
+  }
+)
 </script>
 
 <template>
   <section>
     <div
-      v-if="fiatCurrencies"
+      v-if="payload.currency"
       class="container"
     >
-      <div>
-        <BaseCurrencyInput
-          v-model="state.sum"
-          currency="₽"
-        />
-        <div class="grid grid-cols-4 gap-4">
-          <BaseCurrencyRadio
-            v-model="state.sum"
-            value="5000"
-            currency="₽"
-          />
-          <BaseCurrencyRadio
-            v-model="state.sum"
-            value="10000"
-            currency="₽"
-          />
-          <BaseCurrencyRadio
-            v-model="state.sum"
-            value="15000"
-            currency="₽"
-          />
-          <BaseCurrencyRadio
-            v-model="state.sum"
-            value="20000"
-            currency="₽"
-          />
-        </div>
-        <BaseCurrencySelect />
-      </div>
+      <h1 class="hidden">Payment-App</h1>
+      <BaseSelect
+        v-if="currenciesList"
+        v-model="payload.currency"
+        :data="currenciesList"
+        :dontShowSelected="true"
+        defaultOptionLabel="Другие валюты"
+      />
 
-      <div
-        v-for="currency in fiatCurrencies"
-        :key="currency.name"
-        class="grid grid-cols-5 gap-5 h-12"
-      >
-        <template v-if="currency.abbreviation === 'RUB'">
-          <img
-            v-for="payment in currency.paymentMethods"
-            :key="payment.name"
-            class="h-auto"
-            :src="payment.iconUrl"
-            :alt="payment.name"
-          />
-        </template>
-      </div>
+      <PaymentMethods
+        v-if="currenciesData && payload.currency"
+        v-model="state.methodCode"
+        :data="currenciesData[payload.currency]"
+      />
+
+      <PaymentSum
+        v-model="payload.amount"
+        :payment-method="payload.method"
+        :currency-code="payload.currency"
+      />
     </div>
+
     <div
-      v-if="paymentDataError && isErrorInstance(paymentDataError)"
+      v-if="currenciesDataError && isErrorInstance(currenciesDataError)"
       class="container"
     >
-      {{ paymentDataError.message }}
+      {{ currenciesDataError.message }}
     </div>
   </section>
 </template>
