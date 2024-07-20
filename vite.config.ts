@@ -5,7 +5,7 @@ import { defineConfig } from 'vite'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
-  base: '/million-test-task/dist/',
+  base: '/million-test-task/',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))
